@@ -1,0 +1,83 @@
+
+<div class="dashboard-container">
+
+  <!-- Top navigation bar -->
+  <div class="navbar">
+    <h1>Audit Log System</h1>
+    <div class="nav-right">
+      <span>Welcome, {{ currentUser?.username }}</span>
+      <button class="logout-btn" (click)="logout()">Logout</button>
+    </div>
+  </div>
+
+  <!-- Stats cards row -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <h3>Total Logs</h3>
+      <p>{{ stats?.totalLogs || 0 }}</p>
+    </div>
+    <div class="stat-card success">
+      <h3>Successful Logins Today</h3>
+      <p>{{ stats?.successfulLoginsToday || 0 }}</p>
+    </div>
+    <div class="stat-card danger">
+      <h3>Failed Logins Today</h3>
+      <p>{{ stats?.failedLoginsToday || 0 }}</p>
+    </div>
+  </div>
+
+  <!-- Filter controls -->
+  <div class="filters">
+    <input type="text" placeholder="Search by username" [(ngModel)]="filters.username" />
+    <select [(ngModel)]="filters.action_type">
+      <option value="">All Actions</option>
+      <option value="LOGIN">LOGIN</option>
+      <option value="LOGOUT">LOGOUT</option>
+    </select>
+    <select [(ngModel)]="filters.status">
+      <option value="">All Status</option>
+      <option value="SUCCESS">SUCCESS</option>
+      <option value="FAILED">FAILED</option>
+    </select>
+    <button (click)="applyFilters()">Filter</button>
+    <button (click)="resetFilters()">Reset</button>
+  </div>
+
+  <!-- Logs table -->
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Username</th>
+          <th>Action</th>
+          <th>Description</th>
+          <th>IP Address</th>
+          <th>Status</th>
+          <th>Date & Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let log of logs">
+          <td>{{ log.id }}</td>
+          <td>{{ log.user_id }}</td>
+          <td>{{ log.action_type }}</td>
+          <td>{{ log.description }}</td>
+          <td>{{ log.ip_address }}</td>
+          <td>
+            <span [class]="log.status === 'SUCCESS' ? 'badge success' : 'badge danger'">
+              {{ log.status }}
+            </span>
+          </td>
+          <td>{{ log.created_at | date:'medium' }}</td>
+        </tr>
+
+        <!-- Show message if no logs found -->
+        <tr *ngIf="logs.length === 0">
+          <td colspan="7" style="text-align:center">No logs found</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>

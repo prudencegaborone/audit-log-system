@@ -1,0 +1,43 @@
+<!-- Main container that centres everything on the screen -->
+<div class="login-container">
+  
+  <div class="login-box">
+    
+    <!-- Title -->
+    <h1>Audit Log System</h1>
+    <p>Please sign in to continue</p>
+
+    <!-- Error message shown when login fails -->
+    <div class="error-message" *ngIf="errorMessage">
+      {{ errorMessage }}
+    </div>
+
+    <!-- Login form -->
+    <div class="form-group">
+      <label>Username</label>
+      <input 
+        type="text" 
+        [(ngModel)]="username" 
+        placeholder="Enter username"
+      />
+    </div>
+
+    <div class="form-group">
+      <label>Password</label>
+      <input 
+        type="password" 
+        [(ngModel)]="password" 
+        placeholder="Enter password"
+      />
+    </div>
+
+    <!-- Login button -->
+    <button 
+      class="login-btn" 
+      (click)="login()" 
+      [disabled]="isLoading">
+      {{ isLoading ? 'Signing in...' : 'Sign In' }}
+    </button>
+
+  </div>
+</div>
