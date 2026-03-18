@@ -12,9 +12,12 @@ app.use(cors());
 
 const authRoutes = require('./routes/auth');
 const logRoutes = require('./routes/logs');
+const patientRoutes = require('./routes/patients');
 
 app.use('/api/auth' ,authRoutes);
 app.use('/api/logs', logRoutes);
+app.use('/api/patients', patientRoutes);
+
 
 app.get('/', (req, res) => {
   res.json({ message: 'Audit Log System API is running!' });

@@ -1,0 +1,91 @@
+/* Full page centered layout */
+.login-container {
+  min-height: 100vh;
+  background-color: #f0f2f5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: Arial, sans-serif;
+}
+
+/* Login card */
+.login-card {
+  background: white;
+  padding: 40px;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  width: 100%;
+  max-width: 420px;
+}
+
+/* Title - green to distinguish from audit log app */
+.login-card h1 {
+  text-align: center;
+  color: #276749;
+  margin-bottom: 5px;
+  font-size: 1.6rem;
+}
+
+.login-card p {
+  text-align: center;
+  color: #888;
+  margin-bottom: 25px;
+}
+
+/* Error message */
+.error-message {
+  background-color: #fed7d7;
+  color: #9b2c2c;
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+/* Form fields */
+.form-group {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 0.9rem;
+  color: #555;
+  font-weight: bold;
+}
+
+.form-group input {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 0.95rem;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #276749;
+}
+
+/* Sign in button - green */
+.login-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #276749;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.login-btn:hover {
+  background-color: #1e4f37;
+}
+
+.login-btn:disabled {
+  background-color: #a0aec0;
+  cursor: not-allowed;
+}

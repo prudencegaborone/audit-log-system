@@ -1,0 +1,236 @@
+/* Overall page background */
+.patients-container {
+  min-height: 100vh;
+  background-color: #f0f2f5;
+  font-family: Arial, sans-serif;
+}
+
+/* Navigation bar - matches dashboard style */
+.navbar {
+  background-color: #1a1a2e;
+  color: white;
+  padding: 15px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.navbar h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Link to go back to audit dashboard */
+.nav-link {
+  color: #a0aec0;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.nav-link:hover {
+  color: white;
+}
+
+/* Logout button */
+.logout-btn {
+  background-color: #e53e3e;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* Page header with title and add button */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 25px 30px 10px 30px;
+}
+
+.page-header h2 {
+  margin: 0;
+  color: #1a1a2e;
+}
+
+/* Add new patient button */
+.add-btn {
+  background-color: #4361ee;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.add-btn:hover {
+  background-color: #3451d1;
+}
+
+/* Success message - green */
+.success-message {
+  margin: 10px 30px;
+  padding: 12px;
+  background-color: #c6f6d5;
+  color: #276749;
+  border-radius: 5px;
+}
+
+/* Error message - red */
+.error-message {
+  margin: 10px 30px;
+  padding: 12px;
+  background-color: #fed7d7;
+  color: #9b2c2c;
+  border-radius: 5px;
+}
+
+/* Add/Edit form card */
+.form-card {
+  background: white;
+  margin: 15px 30px;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.form-card h3 {
+  margin-top: 0;
+  color: #1a1a2e;
+  margin-bottom: 20px;
+}
+
+/* Two column grid for form fields */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+/* Full width fields like address and diagnosis */
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  color: #555;
+  font-weight: bold;
+}
+
+.form-group input,
+.form-group select {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 0.95rem;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #4361ee;
+}
+
+/* Form action buttons */
+.form-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.save-btn {
+  background-color: #4361ee;
+  color: white;
+  border: none;
+  padding: 10px 25px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.cancel-btn {
+  background-color: #a0aec0;
+  color: white;
+  border: none;
+  padding: 10px 25px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+/* Patients table */
+.table-container {
+  margin: 15px 30px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead {
+  background-color: #1a1a2e;
+  color: white;
+}
+
+thead th {
+  padding: 14px 15px;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+tbody tr {
+  border-bottom: 1px solid #f0f2f5;
+}
+
+tbody tr:hover {
+  background-color: #f7f9fc;
+}
+
+tbody td {
+  padding: 12px 15px;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+/* Edit button - blue */
+.edit-btn {
+  background-color: #4361ee;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 5px;
+  font-size: 0.85rem;
+}
+
+/* Delete button - red */
+.delete-btn {
+  background-color: #e53e3e;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
