@@ -1,31 +1,26 @@
-
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-
-//import auth middleware to protect all patient routes
-//only logged in admins can access patient records
 const authMiddleware = require('../middleware/authMiddleware');
 
+// Helper function to log actions - now includes system_source
 const logAction = async (username, actionType, description, ip, status) => {
   await db.query(
-    `INSERT INTO audit_logs (user_id, action_type, description, ip_address, status)
-     VALUES (?, ?, ?, ?, ?)`,
-    [username, actionType, description, ip, status]
+    `INSERT INTO audit_logs 
+    (user_id, action_type, description, ip_address, status, system_source)
+    VALUES (?, ?, ?, ?, ?, ?)`,
+    [username, actionType, description, ip, status, 'PATIENT_RECORDS_SYSTEM']
   );
 };
 
-
+// GET all patients
 router.get('/', authMiddleware, async (req, res) => {
   const ip = req.ip || req.connection.remoteAddress;
   const username = req.user.username;
 
   try {
     const [patients] = await db.query('SELECT * FROM patients ORDER BY created_at DESC');
-
-    // Log that the admin viewed all patient records
     await logAction(username, 'VIEW', 'Viewed all patient records', ip, 'SUCCESS');
-
     res.json({ patients });
   } catch (error) {
     console.error('Error fetching patients:', error);
@@ -33,7 +28,7 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
-
+// GET single patient
 router.get('/:id', authMiddleware, async (req, res) => {
   const ip = req.ip || req.connection.remoteAddress;
   const username = req.user.username;
@@ -47,14 +42,11 @@ router.get('/:id', authMiddleware, async (req, res) => {
     }
 
     const patient = rows[0];
-
-    // Log that a specific patient record was viewed
     await logAction(
       username, 'VIEW',
       `Viewed patient record: ${patient.first_name} ${patient.last_name}`,
       ip, 'SUCCESS'
     );
-
     res.json({ patient });
   } catch (error) {
     console.error('Error fetching patient:', error);
@@ -62,11 +54,10 @@ router.get('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-
+// CREATE patient
 router.post('/', authMiddleware, async (req, res) => {
   const ip = req.ip || req.connection.remoteAddress;
   const username = req.user.username;
-
   const { first_name, last_name, date_of_birth, gender, phone, email, address, diagnosis } = req.body;
 
   try {
@@ -77,7 +68,6 @@ router.post('/', authMiddleware, async (req, res) => {
       [first_name, last_name, date_of_birth, gender, phone, email, address, diagnosis, username]
     );
 
-    // Log the creation of a new patient record
     await logAction(
       username, 'CREATE',
       `Created new patient record: ${first_name} ${last_name}`,
@@ -91,12 +81,11 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-
+// UPDATE patient
 router.put('/:id', authMiddleware, async (req, res) => {
   const ip = req.ip || req.connection.remoteAddress;
   const username = req.user.username;
   const { id } = req.params;
-
   const { first_name, last_name, date_of_birth, gender, phone, email, address, diagnosis } = req.body;
 
   try {
@@ -108,7 +97,6 @@ router.put('/:id', authMiddleware, async (req, res) => {
       [first_name, last_name, date_of_birth, gender, phone, email, address, diagnosis, id]
     );
 
-    // log the update ofa patient record
     await logAction(
       username, 'UPDATE',
       `Updated patient record: ${first_name} ${last_name} (ID: ${id})`,
@@ -122,14 +110,13 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-
+// DELETE patient
 router.delete('/:id', authMiddleware, async (req, res) => {
   const ip = req.ip || req.connection.remoteAddress;
   const username = req.user.username;
   const { id } = req.params;
 
   try {
-    // Get patient name before deleting so we can log it
     const [rows] = await db.query('SELECT * FROM patients WHERE id = ?', [id]);
 
     if (rows.length === 0) {
@@ -137,10 +124,8 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     }
 
     const patient = rows[0];
-
     await db.query('DELETE FROM patients WHERE id = ?', [id]);
 
-    // Log the deletion — this is critical for security audit trails
     await logAction(
       username, 'DELETE',
       `Deleted patient record: ${patient.first_name} ${patient.last_name} (ID: ${id})`,
@@ -154,5 +139,4 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// Export the router so server.js can use it
 module.exports = router;

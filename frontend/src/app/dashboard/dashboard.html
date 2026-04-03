@@ -1,84 +1,342 @@
-<div class="dashboard-container">
+<div class="dashboard-wrapper">
 
-  <!-- Top navigation bar -->
-  <div class="navbar">
-    <h1>Audit Log System</h1>
-    <div class="nav-right">
-      <span>Welcome, {{ currentUser?.username }}</span>
-      <button class="logout-btn" (click)="logout()">Logout</button>
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="navbar-brand">
+      🔒 Audit Log System
+      <span class="navbar-sub">Security Monitoring Platform</span>
     </div>
-  </div>
-
-  <!-- Stats cards row -->
-  <div class="stats-row">
-    <div class="stat-card">
-      <h3>Total Logs</h3>
-      <p>{{ stats?.totalLogs || 0 }}</p>
+    <div class="navbar-links">
+      <span class="live-dot"></span>
+      <span class="live-text">LIVE</span>
+      <span class="welcome">Welcome, {{ currentUser?.username }}</span>
+      <button class="btn-logout" (click)="logout()">Logout</button>
     </div>
-    <div class="stat-card success">
-      <h3>Successful Logins Today</h3>
-      <p>{{ stats?.successfulLoginsToday || 0 }}</p>
+  </nav>
+
+  <div class="dashboard-content">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1>Security Dashboard</h1>
+        <p>Real-time audit monitoring · Intrusion detection · Digital investigation support</p>
+      </div>
+      <div class="page-header-right">
+        <span class="pluggable-badge">🔌 Monitoring {{ systems.length }} system(s)</span>
+      </div>
     </div>
-    <div class="stat-card danger">
-      <h3>Failed Logins Today</h3>
-      <p>{{ stats?.failedLoginsToday || 0 }}</p>
+
+    <!-- STAT CARDS -->
+    <div class="stats-grid">
+      <div class="stat-card blue">
+        <div class="stat-icon">📋</div>
+        <div class="stat-info">
+          <div class="stat-label">Total Logs</div>
+          <div class="stat-value">{{ stats?.totalLogs || 0 }}</div>
+          <div class="stat-sub">All systems combined</div>
+        </div>
+      </div>
+
+      <div class="stat-card green">
+        <div class="stat-icon">✅</div>
+        <div class="stat-info">
+          <div class="stat-label">Successful Logins Today</div>
+          <div class="stat-value">{{ stats?.successfulLoginsToday || 0 }}</div>
+          <div class="stat-sub">Authorised sessions today</div>
+        </div>
+      </div>
+
+      <div class="stat-card red">
+        <div class="stat-icon">🚫</div>
+        <div class="stat-info">
+          <div class="stat-label">Failed Logins Today</div>
+          <div class="stat-value">{{ stats?.failedLoginsToday || 0 }}</div>
+          <div class="stat-sub">Unauthorised attempts today</div>
+        </div>
+      </div>
+
+      <div class="stat-card orange" [class.alert]="suspicious && suspicious.length > 0">
+        <div class="stat-icon">⚠️</div>
+        <div class="stat-info">
+          <div class="stat-label">Suspicious IPs</div>
+          <div class="stat-value">{{ suspicious?.length || 0 }}</div>
+          <div class="stat-sub">{{ suspicious && suspicious.length > 0 ? 'Attention required!' : 'No threats detected' }}</div>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <!-- Filter controls -->
-  <div class="filters">
-    <input type="text" placeholder="Search by username" [(ngModel)]="filterUsername" />
-    <select [(ngModel)]="filterAction">
-      <option value="">All Actions</option>
-      <option value="LOGIN">LOGIN</option>
-      <option value="LOGOUT">LOGOUT</option>
-      <option value="VIEW">VIEW</option>
-      <option value="CREATE">CREATE</option>
-      <option value="UPDATE">UPDATE</option>
-      <option value="DELETE">DELETE</option>
-    </select>
-    <select [(ngModel)]="filterStatus">
-      <option value="">All Status</option>
-      <option value="SUCCESS">SUCCESS</option>
-      <option value="FAILED">FAILED</option>
-    </select>
-    <button class="filter-btn" (click)="applyFilters()">Filter</button>
-    <button class="reset-btn" (click)="resetFilters()">Reset</button>
-  </div>
+    <!-- MONITORED SYSTEMS — DYNAMIC -->
+    <div class="systems-section">
+      <div class="systems-header">
+        <div>
+          <h2>🖥️ Monitored Systems</h2>
+          <p>Click "View Only" to filter logs by system</p>
+        </div>
+        <button class="btn-add-system" (click)="showAddSystem = !showAddSystem">
+          {{ showAddSystem ? '✕ Cancel' : '+ Add New System' }}
+        </button>
+      </div>
 
-  <!-- Audit logs table -->
-  <div class="table-container">
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Username</th>
-          <th>Action</th>
-          <th>Description</th>
-          <th>IP Address</th>
-          <th>Status</th>
-          <th>Date & Time</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let log of logs">
-          <td>{{ log.id }}</td>
-          <td>{{ log.user_id }}</td>
-          <td>{{ log.action_type }}</td>
-          <td>{{ log.description }}</td>
-          <td>{{ log.ip_address }}</td>
-          <td>
-            <span [class]="log.status === 'SUCCESS' ? 'badge success' : 'badge failed'">
-              {{ log.status }}
-            </span>
-          </td>
-          <td>{{ log.created_at | date:'medium' }}</td>
-        </tr>
-        <tr *ngIf="logs.length === 0">
-          <td colspan="7" style="text-align:center">No logs found</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+      <!-- ADD NEW SYSTEM FORM -->
+      <div class="add-system-form" *ngIf="showAddSystem">
+        <h3>Register New System to Monitor</h3>
+        <p class="form-note">Once registered, point that system's backend to use this system_key when logging actions.</p>
+        <div class="add-system-grid">
+          <div class="filter-group">
+            <label>System Key (unique, no spaces)</label>
+            <input type="text" [(ngModel)]="newSystem.system_key"
+              placeholder="e.g. BANKING_SYSTEM"
+              class="filter-input" />
+          </div>
+          <div class="filter-group">
+            <label>System Name</label>
+            <input type="text" [(ngModel)]="newSystem.system_name"
+              placeholder="e.g. National Bank Portal"
+              class="filter-input" />
+          </div>
+          <div class="filter-group">
+            <label>Icon (emoji)</label>
+            <input type="text" [(ngModel)]="newSystem.icon"
+              placeholder="e.g. 🏦"
+              class="filter-input" />
+          </div>
+          <div class="filter-group">
+            <label>Description</label>
+            <input type="text" [(ngModel)]="newSystem.description"
+              placeholder="e.g. Internet banking platform"
+              class="filter-input" />
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" (click)="addNewSystem()">✅ Register System</button>
+        </div>
+        <p class="system-message" *ngIf="systemMessage">{{ systemMessage }}</p>
+      </div>
 
+      <!-- SYSTEMS GRID — LOADS DYNAMICALLY -->
+      <div class="system-breakdown">
+        <div class="breakdown-card"
+          *ngFor="let system of systems"
+          [style.border-left-color]="system.system_key === 'AUDIT_LOG_SYSTEM' ? '#3b82f6' : system.system_key === 'PATIENT_RECORDS_SYSTEM' ? '#22c55e' : '#8b5cf6'">
+          <div class="breakdown-icon">{{ system.icon }}</div>
+          <div class="breakdown-info">
+            <div class="breakdown-label">{{ system.system_name }}</div>
+            <div class="breakdown-value">{{ getSystemLogCount(system.system_key) }}</div>
+            <div class="breakdown-sub">{{ system.description }}</div>
+<div class="system-status">
+  <span *ngIf="getSystemLogCount(system.system_key) > 0" class="status-active">
+    🟢 Active — {{ getSystemLogCount(system.system_key) }} log(s)
+  </span>
+  <span *ngIf="getSystemLogCount(system.system_key) === 0" class="status-inactive">
+    🔴 Not yet active
+  </span>
+</div>
+          </div>
+          <div class="breakdown-actions">
+            <button class="btn-filter-system"
+              (click)="filterBySystem(system.system_key)">
+              View Only
+            </button>
+            <button class="btn-deactivate"
+              *ngIf="system.system_key !== 'AUDIT_LOG_SYSTEM'"
+              (click)="deactivateSystem(system.id, system.system_name)">
+              Remove
+            </button>
+          </div>
+        </div>
+
+        <!-- ALL SYSTEMS CARD -->
+        <div class="breakdown-card all">
+          <div class="breakdown-icon">📊</div>
+          <div class="breakdown-info">
+            <div class="breakdown-label">All Systems</div>
+            <div class="breakdown-value">{{ stats?.totalLogs || 0 }}</div>
+            <div class="breakdown-sub">Combined activity across all systems</div>
+          </div>
+          <div class="breakdown-actions">
+            <button class="btn-filter-system" (click)="filterSystem = ''; applyFilters()">
+              View All
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUSPICIOUS ACTIVITY ALERT -->
+    <div class="alert-banner" *ngIf="suspicious && suspicious.length > 0">
+      <h3>⚠️ Suspicious Activity Detected — Possible Brute Force Attack</h3>
+      <p class="alert-desc">The following IP addresses have made 5 or more failed login attempts in the last 10 minutes.</p>
+      <table class="alert-table">
+        <thead>
+          <tr>
+            <th>IP Address</th>
+            <th>Failed Attempts</th>
+            <th>Last Attempt</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of suspicious">
+            <td>{{ s.ip_address }}</td>
+            <td><span class="badge-red">{{ s.failed_attempts }}</span></td>
+            <td>{{ s.last_attempt | date:'medium' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ACTIVITY CHART -->
+    <div class="chart-section">
+      <div class="section-header">
+        <h2>📊 Activity Overview</h2>
+        <p>Breakdown of recorded actions
+          <span *ngIf="filterSystem" class="filter-active-badge">
+            — Showing: {{ getSystemName(filterSystem) }}
+          </span>
+          <span *ngIf="!filterSystem" class="filter-active-badge">
+            — All Systems
+          </span>
+        </p>
+      </div>
+      <div class="chart-container">
+        <div class="chart-bars">
+          <div class="chart-bar-group" *ngFor="let item of chartData">
+            <div class="chart-bar-wrap">
+              <span class="chart-bar-value">{{ item.count }}</span>
+              <div class="chart-bar"
+                [style.height.px]="item.height"
+                [style.background]="item.color">
+              </div>
+            </div>
+            <div class="chart-bar-label">{{ item.action }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="filters-section">
+      <div class="section-header">
+        <h2>🔍 Audit Log Records</h2>
+        <p>Filter, search and export all system activity logs</p>
+      </div>
+
+      <div class="filters-grid">
+        <div class="filter-group">
+          <label>Search Username</label>
+          <input type="text" placeholder="e.g. admin"
+            [(ngModel)]="filterUsername" class="filter-input" />
+        </div>
+
+        <div class="filter-group">
+          <label>Action Type</label>
+          <select [(ngModel)]="filterAction" class="filter-select">
+            <option value="">All Actions</option>
+            <option value="LOGIN">LOGIN</option>
+            <option value="LOGOUT">LOGOUT</option>
+            <option value="VIEW">VIEW</option>
+            <option value="CREATE">CREATE</option>
+            <option value="UPDATE">UPDATE</option>
+            <option value="DELETE">DELETE</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>Status</label>
+          <select [(ngModel)]="filterStatus" class="filter-select">
+            <option value="">All Status</option>
+            <option value="SUCCESS">SUCCESS</option>
+            <option value="FAILED">FAILED</option>
+          </select>
+        </div>
+
+        <!-- DYNAMIC SYSTEM FILTER -->
+        <div class="filter-group">
+          <label>System Source</label>
+          <select [(ngModel)]="filterSystem" class="filter-select">
+            <option value="">All Systems</option>
+            <option *ngFor="let system of systems" [value]="system.system_key">
+              {{ system.icon }} {{ system.system_name }}
+            </option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label>Start Date</label>
+          <input type="date" [(ngModel)]="filterStartDate" class="filter-input" />
+        </div>
+
+        <div class="filter-group">
+          <label>End Date</label>
+          <input type="date" [(ngModel)]="filterEndDate" class="filter-input" />
+        </div>
+      </div>
+
+      <div class="filter-buttons">
+        <button class="btn-primary" (click)="applyFilters()">🔍 Filter</button>
+        <button class="btn-secondary" (click)="resetFilters()">↺ Reset</button>
+        <button class="btn-export" (click)="exportCSV()">⬇ Export CSV Report</button>
+      </div>
+    </div>
+
+    <!-- LOGS TABLE -->
+    <div class="table-wrapper">
+      <div class="table-header">
+        <span>Showing {{ logs.length }} record(s)
+          <span *ngIf="filterSystem" class="filter-active-badge">
+            — {{ getSystemName(filterSystem) }} only
+          </span>
+        </span>
+        <span class="table-note">🔴 Red rows indicate failed or suspicious activity</span>
+      </div>
+      <table class="logs-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Action</th>
+            <th>Description</th>
+            <th>IP Address</th>
+            <th>Status</th>
+            <th>System</th>
+            <th>Date & Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let log of logs" [class.row-failed]="log.status === 'FAILED'">
+            <td>{{ log.id }}</td>
+            <td><strong>{{ log.user_id }}</strong></td>
+            <td>
+              <span class="badge-action" [class]="'badge-' + log.action_type.toLowerCase()">
+                {{ log.action_type }}
+              </span>
+            </td>
+            <td>{{ log.description }}</td>
+            <td class="ip-cell">{{ log.ip_address }}</td>
+            <td>
+              <span [class]="log.status === 'SUCCESS' ? 'badge-success' : 'badge-failed'">
+                {{ log.status }}
+              </span>
+            </td>
+            <td>
+              <span class="badge-system">
+                {{ getSystemName(log.system_source) }}
+              </span>
+            </td>
+            <td>{{ log.created_at | date:'MMM d, y, h:mm:ss a' }}</td>
+          </tr>
+          <tr *ngIf="logs.length === 0">
+            <td colspan="8" class="no-data">No logs found matching your filters</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="dashboard-footer">
+      <p>🔒 Audit Log System — Built for security monitoring, intrusion detection and digital investigations.</p>
+      <p>Currently monitoring <strong>{{ systems.length }} system(s)</strong> · Adaptable to any web application</p>
+    </div>
+
+  </div>
 </div>
