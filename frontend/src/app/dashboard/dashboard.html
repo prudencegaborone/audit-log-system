@@ -7,8 +7,10 @@
       <span class="navbar-sub">Security Monitoring Platform</span>
     </div>
     <div class="navbar-links">
-      <span class="live-dot"></span>
-      <span class="live-text">LIVE</span>
+      <span class="live-dot" [class.offline]="backendStatus === 'offline'" [class.connecting]="backendStatus === 'connecting'"></span>
+<span class="live-text" [class.offline-text]="backendStatus === 'offline'" [class.connecting-text]="backendStatus === 'connecting'">
+  {{ backendStatus === 'live' ? 'LIVE' : backendStatus === 'offline' ? 'OFFLINE' : 'CONNECTING...' }}
+</span>
       <span class="welcome">Welcome, {{ currentUser?.username }}</span>
       <button class="btn-logout" (click)="logout()">Logout</button>
     </div>
@@ -56,7 +58,8 @@
         </div>
       </div>
 
-      <div class="stat-card orange" [class.alert]="suspicious && suspicious.length > 0">
+      <div class="stat-card orange"
+        [class.alert]="suspicious && suspicious.length > 0">
         <div class="stat-icon">⚠️</div>
         <div class="stat-info">
           <div class="stat-label">Suspicious IPs</div>
@@ -66,22 +69,123 @@
       </div>
     </div>
 
-    <!-- MONITORED SYSTEMS — DYNAMIC -->
+    <!-- MONITORED SYSTEMS -->
     <div class="systems-section">
       <div class="systems-header">
         <div>
           <h2>🖥️ Monitored Systems</h2>
           <p>Click "View Only" to filter logs by system</p>
         </div>
-        <button class="btn-add-system" (click)="showAddSystem = !showAddSystem">
-          {{ showAddSystem ? '✕ Cancel' : '+ Add New System' }}
-        </button>
+        <div class="systems-header-buttons">
+          <button class="btn-retention"
+            *ngIf="isAdmin()"
+            (click)="showRetention = !showRetention">
+            {{ showRetention ? '✕ Cancel' : '🗂️ Retention Policy' }}
+          </button>
+          <button class="btn-add-system"
+            *ngIf="isAdmin()"
+            (click)="showAddSystem = !showAddSystem">
+            {{ showAddSystem ? '✕ Cancel' : '+ Add New System' }}
+          </button>
+        </div>
       </div>
+
+      <!-- RETENTION POLICY FORM -->
+      <!-- RETENTION POLICY FORM -->
+<div class="retention-form" *ngIf="showRetention">
+  <h3>🗂️ Log Archiving Policy</h3>
+  <p class="form-note">
+    Logs older than the selected number of days will be
+    <strong>moved to the archive</strong> — not permanently deleted.
+    Audit Log System records are always protected and never archived.
+  </p>
+
+  <!-- EXPORT WARNING -->
+  <div class="export-warning">
+    <span>⚠️ Recommended:</span> Export your current logs before
+    archiving so you have a local copy.
+    <button class="btn-export-small" (click)="exportCSV()">
+      ⬇ Export CSV First
+    </button>
+  </div>
+
+  <div class="retention-controls">
+    <div class="filter-group">
+      <label>Archive logs older than (days)</label>
+      <select [(ngModel)]="retentionDays" class="filter-select">
+        <option [value]="30">30 days</option>
+        <option [value]="60">60 days</option>
+        <option [value]="90">90 days (recommended)</option>
+        <option [value]="180">180 days</option>
+        <option [value]="365">1 year</option>
+      </select>
+    </div>
+    <button class="btn-danger" (click)="applyRetention()">
+      🗂️ Archive Old Logs
+    </button>
+  </div>
+
+  <p class="retention-message" *ngIf="retentionMessage">
+    {{ retentionMessage }}
+  </p>
+
+  <!-- ARCHIVE VIEWER -->
+  <!-- <div class="archive-viewer" *ngIf="archivedLogs.length > 0 || showArchive"> -->
+    <div class="archive-viewer">
+    <div class="archive-header">
+      <h4>📦 Archived Logs ({{ archivedLogs.length }} records)</h4>
+      <button class="btn-secondary"
+        (click)="showArchive = !showArchive; loadArchivedLogs()">
+        {{ showArchive ? 'Hide Archive' : 'View Archive' }}
+      </button>
+    </div>
+    <table class="logs-table" *ngIf="showArchive">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Username</th>
+          <th>Action</th>
+          <th>Description</th>
+          <th>System</th>
+          <th>Original Date</th>
+          <th>Archived At</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let log of archivedLogs">
+          <td>{{ log.id }}</td>
+          <td>{{ log.user_id }}</td>
+          <td>
+            <span class="badge-action"
+              [class]="'badge-' + log.action_type.toLowerCase()">
+              {{ log.action_type }}
+            </span>
+          </td>
+          <td>{{ log.description }}</td>
+          <td>
+            <span class="badge-system">
+              {{ getSystemName(log.system_source) }}
+            </span>
+          </td>
+          <td>{{ log.created_at | date:'MMM d, y' }}</td>
+          <td>{{ log.archived_at | date:'MMM d, y' }}</td>
+        </tr>
+        <tr *ngIf="archivedLogs.length === 0">
+          <td colspan="7" class="no-data">No archived logs yet</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
 
       <!-- ADD NEW SYSTEM FORM -->
       <div class="add-system-form" *ngIf="showAddSystem">
         <h3>Register New System to Monitor</h3>
-        <p class="form-note">Once registered, point that system's backend to use this system_key when logging actions.</p>
+        <p class="form-note">
+          Once registered, point that system's backend to use
+          this system_key when logging actions.
+        </p>
         <div class="add-system-grid">
           <div class="filter-group">
             <label>System Key (unique, no spaces)</label>
@@ -109,12 +213,16 @@
           </div>
         </div>
         <div class="form-actions">
-          <button class="btn-primary" (click)="addNewSystem()">✅ Register System</button>
+          <button class="btn-primary" (click)="addNewSystem()">
+            ✅ Register System
+          </button>
         </div>
-        <p class="system-message" *ngIf="systemMessage">{{ systemMessage }}</p>
+        <p class="system-message" *ngIf="systemMessage">
+          {{ systemMessage }}
+        </p>
       </div>
 
-      <!-- SYSTEMS GRID — LOADS DYNAMICALLY -->
+      <!-- SYSTEMS GRID -->
       <div class="system-breakdown">
         <div class="breakdown-card"
           *ngFor="let system of systems"
@@ -122,16 +230,20 @@
           <div class="breakdown-icon">{{ system.icon }}</div>
           <div class="breakdown-info">
             <div class="breakdown-label">{{ system.system_name }}</div>
-            <div class="breakdown-value">{{ getSystemLogCount(system.system_key) }}</div>
+            <div class="breakdown-value">
+              {{ getSystemLogCount(system.system_key) }}
+            </div>
             <div class="breakdown-sub">{{ system.description }}</div>
-<div class="system-status">
-  <span *ngIf="getSystemLogCount(system.system_key) > 0" class="status-active">
-    🟢 Active — {{ getSystemLogCount(system.system_key) }} log(s)
-  </span>
-  <span *ngIf="getSystemLogCount(system.system_key) === 0" class="status-inactive">
-    🔴 Not yet active
-  </span>
-</div>
+            <div class="system-status">
+              <span *ngIf="getSystemLogCount(system.system_key) > 0"
+                class="status-active">
+                🟢 Active — {{ getSystemLogCount(system.system_key) }} log(s)
+              </span>
+              <span *ngIf="getSystemLogCount(system.system_key) === 0"
+                class="status-inactive">
+                🔴 Not yet active
+              </span>
+            </div>
           </div>
           <div class="breakdown-actions">
             <button class="btn-filter-system"
@@ -139,7 +251,7 @@
               View Only
             </button>
             <button class="btn-deactivate"
-              *ngIf="system.system_key !== 'AUDIT_LOG_SYSTEM'"
+              *ngIf="system.system_key !== 'AUDIT_LOG_SYSTEM' && isAdmin()"
               (click)="deactivateSystem(system.id, system.system_name)">
               Remove
             </button>
@@ -152,10 +264,13 @@
           <div class="breakdown-info">
             <div class="breakdown-label">All Systems</div>
             <div class="breakdown-value">{{ stats?.totalLogs || 0 }}</div>
-            <div class="breakdown-sub">Combined activity across all systems</div>
+            <div class="breakdown-sub">
+              Combined activity across all systems
+            </div>
           </div>
           <div class="breakdown-actions">
-            <button class="btn-filter-system" (click)="filterSystem = ''; applyFilters()">
+            <button class="btn-filter-system"
+              (click)="filterSystem = ''; applyFilters()">
               View All
             </button>
           </div>
@@ -164,9 +279,13 @@
     </div>
 
     <!-- SUSPICIOUS ACTIVITY ALERT -->
-    <div class="alert-banner" *ngIf="suspicious && suspicious.length > 0">
+    <div class="alert-banner"
+      *ngIf="suspicious && suspicious.length > 0">
       <h3>⚠️ Suspicious Activity Detected — Possible Brute Force Attack</h3>
-      <p class="alert-desc">The following IP addresses have made 5 or more failed login attempts in the last 10 minutes.</p>
+      <p class="alert-desc">
+        The following IP addresses have made 5 or more failed login
+        attempts in the last 10 minutes.
+      </p>
       <table class="alert-table">
         <thead>
           <tr>
@@ -250,12 +369,12 @@
           </select>
         </div>
 
-        <!-- DYNAMIC SYSTEM FILTER -->
         <div class="filter-group">
           <label>System Source</label>
           <select [(ngModel)]="filterSystem" class="filter-select">
             <option value="">All Systems</option>
-            <option *ngFor="let system of systems" [value]="system.system_key">
+            <option *ngFor="let system of systems"
+              [value]="system.system_key">
               {{ system.icon }} {{ system.system_name }}
             </option>
           </select>
@@ -263,32 +382,47 @@
 
         <div class="filter-group">
           <label>Start Date</label>
-          <input type="date" [(ngModel)]="filterStartDate" class="filter-input" />
+          <input type="date" [(ngModel)]="filterStartDate"
+            class="filter-input" />
         </div>
 
         <div class="filter-group">
           <label>End Date</label>
-          <input type="date" [(ngModel)]="filterEndDate" class="filter-input" />
+          <input type="date" [(ngModel)]="filterEndDate"
+            class="filter-input" />
         </div>
       </div>
 
       <div class="filter-buttons">
-        <button class="btn-primary" (click)="applyFilters()">🔍 Filter</button>
-        <button class="btn-secondary" (click)="resetFilters()">↺ Reset</button>
-        <button class="btn-export" (click)="exportCSV()">⬇ Export CSV Report</button>
+        <button class="btn-primary" (click)="applyFilters()">
+          🔍 Filter
+        </button>
+        <button class="btn-secondary" (click)="resetFilters()">
+          ↺ Reset
+        </button>
+        <button class="btn-export"
+          *ngIf="isAdmin() || isAuditor()"
+          (click)="exportCSV()">
+          ⬇ Export CSV Report
+        </button>
       </div>
     </div>
 
     <!-- LOGS TABLE -->
     <div class="table-wrapper">
       <div class="table-header">
-        <span>Showing {{ logs.length }} record(s)
+        <span>
+          Showing {{ logs.length }} of {{ totalLogs }} record(s)
+          — Page {{ currentPage }} of {{ totalPages }}
           <span *ngIf="filterSystem" class="filter-active-badge">
             — {{ getSystemName(filterSystem) }} only
           </span>
         </span>
-        <span class="table-note">🔴 Red rows indicate failed or suspicious activity</span>
+        <span class="table-note">
+          🔴 Red rows indicate failed or suspicious activity
+        </span>
       </div>
+
       <table class="logs-table">
         <thead>
           <tr>
@@ -303,18 +437,21 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let log of logs" [class.row-failed]="log.status === 'FAILED'">
+          <tr *ngFor="let log of logs"
+            [class.row-failed]="log.status === 'FAILED'">
             <td>{{ log.id }}</td>
             <td><strong>{{ log.user_id }}</strong></td>
             <td>
-              <span class="badge-action" [class]="'badge-' + log.action_type.toLowerCase()">
+              <span class="badge-action"
+                [class]="'badge-' + log.action_type.toLowerCase()">
                 {{ log.action_type }}
               </span>
             </td>
             <td>{{ log.description }}</td>
             <td class="ip-cell">{{ log.ip_address }}</td>
             <td>
-              <span [class]="log.status === 'SUCCESS' ? 'badge-success' : 'badge-failed'">
+              <span [class]="log.status === 'SUCCESS' ?
+                'badge-success' : 'badge-failed'">
                 {{ log.status }}
               </span>
             </td>
@@ -326,16 +463,58 @@
             <td>{{ log.created_at | date:'MMM d, y, h:mm:ss a' }}</td>
           </tr>
           <tr *ngIf="logs.length === 0">
-            <td colspan="8" class="no-data">No logs found matching your filters</td>
+            <td colspan="8" class="no-data">
+              No logs found matching your filters
+            </td>
           </tr>
         </tbody>
       </table>
+
+      <!-- PAGINATION -->
+      <div class="pagination">
+        <button class="page-btn"
+          (click)="goToPage(1)"
+          [disabled]="currentPage === 1">
+          «
+        </button>
+        <button class="page-btn"
+          (click)="prevPage()"
+          [disabled]="currentPage === 1">
+          ‹
+        </button>
+
+        <button class="page-btn"
+          *ngFor="let page of getPageNumbers()"
+          (click)="goToPage(page)"
+          [class.active]="page === currentPage">
+          {{ page }}
+        </button>
+
+        <button class="page-btn"
+          (click)="nextPage()"
+          [disabled]="currentPage === totalPages">
+          ›
+        </button>
+        <button class="page-btn"
+          (click)="goToPage(totalPages)"
+          [disabled]="currentPage === totalPages">
+          »
+        </button>
+
+        <span class="page-info">
+          {{ (currentPage - 1) * limit + 1 }}–{{ Math.min(currentPage * limit, totalLogs) }}
+          of {{ totalLogs }} records
+        </span>
+      </div>
+
     </div>
 
     <!-- FOOTER -->
     <div class="dashboard-footer">
-      <p>🔒 Audit Log System — Built for security monitoring, intrusion detection and digital investigations.</p>
-      <p>Currently monitoring <strong>{{ systems.length }} system(s)</strong> · Adaptable to any web application</p>
+      <p>🔒 Audit Log System — Built for security monitoring,
+        intrusion detection and digital investigations.</p>
+      <p>Currently monitoring <strong>{{ systems.length }} system(s)</strong>
+        · Adaptable to any web application</p>
     </div>
 
   </div>

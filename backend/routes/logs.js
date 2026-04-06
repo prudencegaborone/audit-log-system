@@ -1,45 +1,75 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const authMiddleware = require('../middleware/authMiddleware');
+const { authMiddleware, adminOnly, auditorAndAbove } = require('../middleware/authMiddleware');
 
-// GET all logs with optional filters including system_source
+// GET all logs with filters and pagination
+// Both admin and auditor can view logs
 router.get('/', authMiddleware, async (req, res) => {
-  const { username, action_type, status, start_date, end_date, system_source } = req.query;
+  const { username, action_type, status, start_date, end_date, system_source, page = 1, limit = 50 } = req.query;
 
   try {
     let query = 'SELECT * FROM audit_logs WHERE 1=1';
+    let countQuery = 'SELECT COUNT(*) as total FROM audit_logs WHERE 1=1';
     const params = [];
+    const countParams = [];
 
     if (username) {
       query += ' AND user_id LIKE ?';
+      countQuery += ' AND user_id LIKE ?';
       params.push(`%${username}%`);
+      countParams.push(`%${username}%`);
     }
     if (action_type) {
       query += ' AND action_type = ?';
+      countQuery += ' AND action_type = ?';
       params.push(action_type);
+      countParams.push(action_type);
     }
     if (status) {
       query += ' AND status = ?';
+      countQuery += ' AND status = ?';
       params.push(status);
+      countParams.push(status);
     }
     if (start_date) {
       query += ' AND created_at >= ?';
+      countQuery += ' AND created_at >= ?';
       params.push(start_date);
+      countParams.push(start_date);
     }
     if (end_date) {
       query += ' AND created_at <= ?';
+      countQuery += ' AND created_at <= ?';
       params.push(end_date);
+      countParams.push(end_date);
     }
     if (system_source) {
       query += ' AND system_source = ?';
+      countQuery += ' AND system_source = ?';
       params.push(system_source);
+      countParams.push(system_source);
     }
 
-    query += ' ORDER BY created_at DESC';
+    const [countResult] = await db.query(countQuery, countParams);
+    const total = countResult[0].total;
+    const totalPages = Math.ceil(total / limit);
+    const offset = (page - 1) * limit;
+
+    query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    params.push(parseInt(limit), parseInt(offset));
 
     const [logs] = await db.query(query, params);
-    res.json({ logs });
+
+    res.json({
+      logs,
+      pagination: {
+        total,
+        totalPages,
+        currentPage: parseInt(page),
+        limit: parseInt(limit)
+      }
+    });
 
   } catch (error) {
     console.error('Error fetching logs:', error);
@@ -48,6 +78,7 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 // GET suspicious activity
+// Both admin and auditor can view
 router.get('/suspicious', authMiddleware, async (req, res) => {
   try {
     const [suspicious] = await db.query(`
@@ -71,20 +102,19 @@ router.get('/suspicious', authMiddleware, async (req, res) => {
   }
 });
 
-// GET dashboard stats — separated by system_source
+// GET dashboard stats
+// Both admin and auditor can view
 router.get('/stats', authMiddleware, async (req, res) => {
   try {
     const [total] = await db.query(
       'SELECT COUNT(*) as count FROM audit_logs'
     );
-
     const [failedToday] = await db.query(`
       SELECT COUNT(*) as count 
       FROM audit_logs 
       WHERE status = 'FAILED' 
       AND DATE(created_at) = CURDATE()
     `);
-
     const [successToday] = await db.query(`
       SELECT COUNT(*) as count 
       FROM audit_logs 
@@ -92,14 +122,11 @@ router.get('/stats', authMiddleware, async (req, res) => {
       AND status = 'SUCCESS' 
       AND DATE(created_at) = CURDATE()
     `);
-
-    // Count logs per system source
     const [auditSystemLogs] = await db.query(`
       SELECT COUNT(*) as count 
       FROM audit_logs 
       WHERE system_source = 'AUDIT_LOG_SYSTEM'
     `);
-
     const [patientSystemLogs] = await db.query(`
       SELECT COUNT(*) as count 
       FROM audit_logs 
@@ -121,7 +148,8 @@ router.get('/stats', authMiddleware, async (req, res) => {
 });
 
 // EXPORT logs as CSV
-router.get('/export', authMiddleware, async (req, res) => {
+// Both admin and auditor can export
+router.get('/export', authMiddleware, auditorAndAbove, async (req, res) => {
   const { username, action_type, status, start_date, end_date, system_source } = req.query;
 
   try {
@@ -157,7 +185,6 @@ router.get('/export', authMiddleware, async (req, res) => {
 
     const [logs] = await db.query(query, params);
 
-    // Build CSV with system_source column included
     const headers = 'ID,Username,Action,Description,IP Address,Status,System,Date & Time\n';
     const rows = logs.map(log => {
       const date = new Date(log.created_at).toLocaleString();
@@ -165,7 +192,6 @@ router.get('/export', authMiddleware, async (req, res) => {
     }).join('\n');
 
     const csv = headers + rows;
-
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename=audit_logs_${new Date().toISOString().split('T')[0]}.csv`);
     res.send(csv);
@@ -173,6 +199,88 @@ router.get('/export', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Export error:', error);
     res.status(500).json({ message: 'Server error during export' });
+  }
+});
+
+// ARCHIVE logs — admin only
+// Auditors cannot archive — protects log integrity
+router.delete('/retention', authMiddleware, adminOnly, async (req, res) => {
+  const { days = 90 } = req.query;
+  const username = req.user.username;
+  const ip = req.ip || req.connection.remoteAddress;
+
+  try {
+    const [archiveResult] = await db.query(
+      `INSERT INTO audit_logs_archive 
+       (id, user_id, action_type, description, ip_address, status, system_source, created_at)
+       SELECT id, user_id, action_type, description, ip_address, status, system_source, created_at
+       FROM audit_logs
+       WHERE created_at < NOW() - INTERVAL ? DAY
+       AND system_source != 'AUDIT_LOG_SYSTEM'`,
+      [parseInt(days)]
+    );
+
+    const [deleteResult] = await db.query(
+      `DELETE FROM audit_logs
+       WHERE created_at < NOW() - INTERVAL ? DAY
+       AND system_source != 'AUDIT_LOG_SYSTEM'`,
+      [parseInt(days)]
+    );
+
+    await db.query(
+      `INSERT INTO audit_logs
+       (user_id, action_type, description, ip_address, status, system_source)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [username, 'DELETE',
+        `Log archiving applied: moved ${deleteResult.affectedRows} records older than ${days} days to archive`,
+        ip, 'SUCCESS', 'AUDIT_LOG_SYSTEM']
+    );
+
+    res.json({
+      message: `Successfully archived logs older than ${days} days`,
+      archivedCount: deleteResult.affectedRows
+    });
+
+  } catch (error) {
+    console.error('Archive error:', error);
+    res.status(500).json({ message: 'Server error during archiving' });
+  }
+});
+
+// GET archived logs
+// Both admin and auditor can view archive
+router.get('/archive', authMiddleware, auditorAndAbove, async (req, res) => {
+  const { username, action_type, status, system_source } = req.query;
+
+  try {
+    let query = 'SELECT * FROM audit_logs_archive WHERE 1=1';
+    const params = [];
+
+    if (username) {
+      query += ' AND user_id LIKE ?';
+      params.push(`%${username}%`);
+    }
+    if (action_type) {
+      query += ' AND action_type = ?';
+      params.push(action_type);
+    }
+    if (status) {
+      query += ' AND status = ?';
+      params.push(status);
+    }
+    if (system_source) {
+      query += ' AND system_source = ?';
+      params.push(system_source);
+    }
+
+    query += ' ORDER BY created_at DESC';
+
+    const [logs] = await db.query(query, params);
+    res.json({ logs, total: logs.length });
+
+  } catch (error) {
+    console.error('Error fetching archive:', error);
+    res.status(500).json({ message: 'Server error fetching archive' });
   }
 });
 

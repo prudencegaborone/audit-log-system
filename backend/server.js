@@ -6,26 +6,26 @@ require('dotenv').config();
 
 const app = express();
 
-// HELMET  adds security headers to every response
+// HELMET — adds security headers to every response
 app.use(helmet());
 
-// CORS  only allow requests from our Angular frontend
+// CORS — allow requests from both frontend apps
 app.use(cors({
-  origin: 'http://localhost:4200',
+  origin: ['http://localhost:4200', 'http://localhost:4201'],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json());
 
-// RATE LIMITING  limit each IP to 100 requests per 15 minutes
+// RATE LIMITING — limit each IP to 100 requests per 15 minutes
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   message: { message: 'Too many requests, please try again later.' }
 });
 
-// STRICT RATE LIMITING limit login attempts to 10 per 15 minutes
+// STRICT RATE LIMITING — limit login attempts to 10 per 15 minutes
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,

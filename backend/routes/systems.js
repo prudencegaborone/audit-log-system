@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const authMiddleware = require('../middleware/authMiddleware');
+const { authMiddleware, adminOnly } = require('../middleware/authMiddleware');
 
 // GET all monitored systems
+// Both admin and auditor can view
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const [systems] = await db.query(
@@ -17,7 +18,8 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 // ADD a new monitored system
-router.post('/', authMiddleware, async (req, res) => {
+// Admin only
+router.post('/', authMiddleware, adminOnly, async (req, res) => {
   const { system_key, system_name, description, icon } = req.body;
   const ip = req.ip || req.connection.remoteAddress;
   const username = req.user.username;
@@ -29,7 +31,6 @@ router.post('/', authMiddleware, async (req, res) => {
       [system_key, system_name, description, icon || '🔌']
     );
 
-    // Log the addition of a new system
     await db.query(
       `INSERT INTO audit_logs
        (user_id, action_type, description, ip_address, status, system_source)
@@ -45,18 +46,24 @@ router.post('/', authMiddleware, async (req, res) => {
 });
 
 // DEACTIVATE a system
-router.put('/:id/deactivate', authMiddleware, async (req, res) => {
+// Admin only
+router.put('/:id/deactivate', authMiddleware, adminOnly, async (req, res) => {
   const { id } = req.params;
   const ip = req.ip || req.connection.remoteAddress;
   const username = req.user.username;
 
   try {
-    const [rows] = await db.query('SELECT * FROM monitored_systems WHERE id = ?', [id]);
+    const [rows] = await db.query(
+      'SELECT * FROM monitored_systems WHERE id = ?', [id]
+    );
+
     if (rows.length === 0) {
       return res.status(404).json({ message: 'System not found' });
     }
 
-    await db.query('UPDATE monitored_systems SET is_active = FALSE WHERE id = ?', [id]);
+    await db.query(
+      'UPDATE monitored_systems SET is_active = FALSE WHERE id = ?', [id]
+    );
 
     await db.query(
       `INSERT INTO audit_logs

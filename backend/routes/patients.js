@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const authMiddleware = require('../middleware/authMiddleware');
+const { authMiddleware, adminOnly } = require('../middleware/authMiddleware');
 
-// Helper function to log actions - now includes system_source
+// Helper function to log actions
 const logAction = async (username, actionType, description, ip, status) => {
   await db.query(
     `INSERT INTO audit_logs 
@@ -13,13 +13,15 @@ const logAction = async (username, actionType, description, ip, status) => {
   );
 };
 
-// GET all patients
+// GET all patients — admin and auditor can view
 router.get('/', authMiddleware, async (req, res) => {
   const ip = req.ip || req.connection.remoteAddress;
   const username = req.user.username;
 
   try {
-    const [patients] = await db.query('SELECT * FROM patients ORDER BY created_at DESC');
+    const [patients] = await db.query(
+      'SELECT * FROM patients ORDER BY created_at DESC'
+    );
     await logAction(username, 'VIEW', 'Viewed all patient records', ip, 'SUCCESS');
     res.json({ patients });
   } catch (error) {
@@ -28,14 +30,16 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
-// GET single patient
+// GET single patient — admin and auditor can view
 router.get('/:id', authMiddleware, async (req, res) => {
   const ip = req.ip || req.connection.remoteAddress;
   const username = req.user.username;
   const { id } = req.params;
 
   try {
-    const [rows] = await db.query('SELECT * FROM patients WHERE id = ?', [id]);
+    const [rows] = await db.query(
+      'SELECT * FROM patients WHERE id = ?', [id]
+    );
 
     if (rows.length === 0) {
       return res.status(404).json({ message: 'Patient not found' });
@@ -54,8 +58,8 @@ router.get('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// CREATE patient
-router.post('/', authMiddleware, async (req, res) => {
+// CREATE patient — admin only
+router.post('/', authMiddleware, adminOnly, async (req, res) => {
   const ip = req.ip || req.connection.remoteAddress;
   const username = req.user.username;
   const { first_name, last_name, date_of_birth, gender, phone, email, address, diagnosis } = req.body;
@@ -81,8 +85,8 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 });
 
-// UPDATE patient
-router.put('/:id', authMiddleware, async (req, res) => {
+// UPDATE patient — admin only
+router.put('/:id', authMiddleware, adminOnly, async (req, res) => {
   const ip = req.ip || req.connection.remoteAddress;
   const username = req.user.username;
   const { id } = req.params;
@@ -110,14 +114,16 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// DELETE patient
-router.delete('/:id', authMiddleware, async (req, res) => {
+// DELETE patient — admin only
+router.delete('/:id', authMiddleware, adminOnly, async (req, res) => {
   const ip = req.ip || req.connection.remoteAddress;
   const username = req.user.username;
   const { id } = req.params;
 
   try {
-    const [rows] = await db.query('SELECT * FROM patients WHERE id = ?', [id]);
+    const [rows] = await db.query(
+      'SELECT * FROM patients WHERE id = ?', [id]
+    );
 
     if (rows.length === 0) {
       return res.status(404).json({ message: 'Patient not found' });
